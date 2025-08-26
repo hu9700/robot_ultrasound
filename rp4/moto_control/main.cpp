@@ -6,6 +6,7 @@
 #include <chrono>
 #include <thread>
 
+#include <cmath>
 /*
 26  1/2 EN
 16  3/4 EN
@@ -19,6 +20,8 @@
 
 #define PWM_FREQ    (1000)//HZ
 #define PWM_DUTY_MIN    (30)
+#define PWM_DUTY_AVG    (40)
+#define PWM_DUTY_MAX    (50)
 
 #define PIN_12EN    (26)
 #define PIN_34EN    (16)
@@ -134,6 +137,47 @@ void Right_Backward(float duty) {
   gpiod_line_set_value(Pin34EN_out, 1);
 }
 
+void Turn_Right(void) {
+    Right_Forward(0);
+    Left_Backward(0);
+}
+
+void Turn_Left(void) {
+    Right_Backward(0);
+    Left_Forward(0);
+}
+
+//turn bias negative, turn left
+//turn bias positive, turn right
+//turn bias is between -1 to 1
+void Go_Forward_Turn(float turn_bias) {
+    int left_pwm = PWM_DUTY_AVG;
+    int right_pwm = PWM_DUTY_AVG;
+
+    if(turn_bias < -1) {
+        turn_bias = -1;
+    }
+    if(turn_bias > 1) {
+        turn_bias = 1;
+    }
+
+    if(turn_bias < 0) {
+        left_pwm += std::abs((PWM_DUTY_MAX - PWM_DUTY_AVG) * turn_bias);
+        right_pwm -= std::abs((PWM_DUTY_AVG - PWM_DUTY_MIN) * turn_bias);
+    }
+    else {
+        right_pwm += std::abs((PWM_DUTY_MAX - PWM_DUTY_AVG) * turn_bias);
+        left_pwm -= std::abs((PWM_DUTY_AVG - PWM_DUTY_MIN) * turn_bias);
+    }
+
+    gpioPWM(PIN_1A, 0);
+    gpioPWM(PIN_2A, left_pwm * 255 / 100);
+    gpioPWM(PIN_3A, 0);
+    gpioPWM(PIN_4A, right_pwm * 255 / 100);    
+    gpiod_line_set_value(Pin12EN_out, 1);
+    gpiod_line_set_value(Pin34EN_out, 1);
+}
+
 int init(void) {
     if(init_pwm() == 0) {
         if(init_gpio() == 0) {
@@ -146,31 +190,45 @@ int init(void) {
     return -1;
 }
 
+void test_direction(void) {
+    printf("Left Forward\n");
+    Left_Forward(0);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    Left_Stop();
+
+    printf("Right Forward\n");
+    Right_Forward(0);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    Right_Stop();
+    
+    printf("Left Backward\n");
+    Left_Backward(0);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    Left_Stop();
+    
+    printf("Right Backward\n");
+    Right_Backward(0);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    Right_Stop();
+}
+
+void test_turn(void) {
+    for(float i = -1; i <= 1; i = i + 0.2) {
+        Go_Forward_Turn(i);
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+    }
+}
+
 int main(int argc, char **argv) {
     if(init() == 0) {
         while(!is_stop) {
-            printf("Left Forward\n");
-            Left_Forward(0);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            Left_Stop();
-
-            printf("Right Forward\n");
-            Right_Forward(0);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            Right_Stop();
-            
-            printf("Left Backward\n");
-            Left_Backward(0);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            Left_Stop();
-            
-            printf("Right Backward\n");
-            Right_Backward(0);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            Right_Stop();
+            //test_direction();
+            test_turn();
         }
     }
 
+    Left_Stop();
+    Right_Stop();
     gpiod_chip_close(chip);
     gpioTerminate();
 
