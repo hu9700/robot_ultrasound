@@ -68,7 +68,7 @@ void setup() {
   digitalWrite(pin12En, HIGH);
   digitalWrite(pin34En, HIGH);
 
-  //Left_Forward();
+  Left_Forward();
   //Left_Backward();
   //Right_Forward();
   //Right_Backward();
