@@ -151,7 +151,7 @@ void Turn_Left(void) {
 //turn bias positive, turn right
 //turn bias is between -1 to 1
 void Go_Forward_Turn(float turn_bias) {
-    int left_pwm = PWM_DUTY_AVG;
+    int left_pwm = PWM_DUTY_AVG + 7;
     int right_pwm = PWM_DUTY_AVG;
 
     if(turn_bias < -1) {
@@ -162,12 +162,12 @@ void Go_Forward_Turn(float turn_bias) {
     }
 
     if(turn_bias < 0) {
-        left_pwm += std::abs((PWM_DUTY_MAX - PWM_DUTY_AVG) * turn_bias);
-        right_pwm -= std::abs((PWM_DUTY_AVG - PWM_DUTY_MIN) * turn_bias);
+        right_pwm += std::abs((PWM_DUTY_MAX - PWM_DUTY_AVG) * turn_bias);
+        left_pwm -= std::abs((PWM_DUTY_AVG - PWM_DUTY_MIN) * turn_bias);        
     }
     else {
-        right_pwm += std::abs((PWM_DUTY_MAX - PWM_DUTY_AVG) * turn_bias);
-        left_pwm -= std::abs((PWM_DUTY_AVG - PWM_DUTY_MIN) * turn_bias);
+        left_pwm += std::abs((PWM_DUTY_MAX - PWM_DUTY_AVG) * turn_bias);
+        right_pwm -= std::abs((PWM_DUTY_AVG - PWM_DUTY_MIN) * turn_bias);
     }
 
     gpioPWM(PIN_1A, 0);
@@ -176,6 +176,34 @@ void Go_Forward_Turn(float turn_bias) {
     gpioPWM(PIN_4A, right_pwm * 255 / 100);    
     gpiod_line_set_value(Pin12EN_out, 1);
     gpiod_line_set_value(Pin34EN_out, 1);
+}
+
+void Go_Turn(float turn_bias) {
+    int left_pwm = 0;
+    int right_pwm = 0;
+
+    printf("%f\n", turn_bias);
+
+    if(turn_bias < -1) {
+        turn_bias = -1;
+    }
+    if(turn_bias > 1) {
+        turn_bias = 1;
+    }
+
+    if(turn_bias < 0) {
+        left_pwm = PWM_DUTY_MIN + std::abs((PWM_DUTY_MAX - PWM_DUTY_MIN) * turn_bias);
+    }
+    else {
+        right_pwm = PWM_DUTY_MIN + std::abs((PWM_DUTY_MAX - PWM_DUTY_MIN) * turn_bias);
+    }
+
+    gpioPWM(PIN_1A, 0);
+    gpioPWM(PIN_2A, left_pwm * 255 / 100);
+    gpioPWM(PIN_3A, 0);
+    gpioPWM(PIN_4A, right_pwm * 255 / 100);    
+    gpiod_line_set_value(Pin12EN_out, 1);
+    gpiod_line_set_value(Pin34EN_out, 1);    
 }
 
 int init(void) {
@@ -213,10 +241,16 @@ void test_direction(void) {
 }
 
 void test_turn(void) {
-    for(float i = -1; i <= 1; i = i + 0.2) {
-        Go_Forward_Turn(i);
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+#if 1    
+    for(int i = 0; i < 10; i ++) {
+        Go_Forward_Turn(-0.5 + (i % 2));
+        //Go_Turn(-0.5 + (i % 2));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+#else
+    Go_Forward_Turn(0);
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+#endif
 }
 
 int main(int argc, char **argv) {
