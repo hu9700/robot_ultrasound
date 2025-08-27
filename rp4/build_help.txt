@@ -1,0 +1,6 @@
+git clone --depth=1 -b rpi-6.12.y https://github.com/raspberrypi/linux
+export RTVER=6.12.43-rt12
+export KVER=6.12.43
+wget https://www.kernel.org/pub/linux/kernel/projects/rt/${KVER%.*}/patch-$RTVER.patch.xz
+unxz patch-$RTVER.patch.xz
+patch -p1 < patch-$RTVER.patch
